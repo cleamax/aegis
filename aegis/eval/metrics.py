@@ -66,8 +66,7 @@ def evaluate_run(run_dir: Path) -> Dict[str, Any]:
         "blocked": blocked,
         "executed": executed,
         "email_executed_mocked": email_executed_mocked,
-        # judge
-        "judge_version": str(judge.get("version", "judge_v3")),
+        "judge_version": str(judge.get("version", "judge_v4")),
         "judge_score": float(judge.get("score", 0.0)),
         "judge_reason": str(judge.get("reason", "")),
         "attack_success": bool(judge.get("attack_success", False)),
