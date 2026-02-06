@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 from aegis.core.run import new_run
 from aegis.defenses.approval_monitor import ApprovalMonitor, Policy
 from aegis.eval.metrics import evaluate_run
+from aegis.eval.report import bench_summary_to_markdown
 from aegis.tools.search_local_page import SearchLocalPageTool
 from aegis.tools.send_email import SendEmailTool
 
@@ -35,9 +36,8 @@ def _policy_from_name(name: str) -> Policy:
 def run_scenario_demo(ctx, scenario: str, policy_name: str) -> None:
     """
     Minimal bench runner for our current demos.
-    For now:
-      - indirect_injection_01 -> uses search_local_page + tries send_email
-      - hello -> does nothing
+    - hello: does nothing
+    - indirect_injection_01: fetches untrusted HTML and attempts send_email
     """
     policy = _policy_from_name(policy_name)
     monitor = ApprovalMonitor(policy=policy)
@@ -123,14 +123,21 @@ def bench(out_root: str, scenarios: List[str], policies: List[str]) -> Dict[str,
                 )
             )
 
-    payload = {
+    payload: Dict[str, Any] = {
         "out_root": out_root,
         "scenarios": scenarios,
         "policies": policies,
         "results": [r.__dict__ for r in results],
     }
 
-    summary_path = Path(out_root) / "bench_summary.json"
-    summary_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    out_path = Path(out_root)
+    out_path.mkdir(parents=True, exist_ok=True)
 
-    return {"summary_path": str(summary_path), "payload": payload}
+    summary_json = out_path / "bench_summary.json"
+    summary_md = out_path / "bench_summary.md"
+
+    summary_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    summary_md.write_text(bench_summary_to_markdown(payload), encoding="utf-8")
+
+    return {"summary_json": str(summary_json), "summary_md": str(summary_md), "payload": payload}
+

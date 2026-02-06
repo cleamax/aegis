@@ -188,11 +188,14 @@ def main() -> None:
     # =========================
     if args.cmd == "bench":
         res = bench(out_root=args.out, scenarios=args.scenarios, policies=args.policies)
-        summary_path = res["summary_path"]
+
+        summary_json = res["summary_json"]
+        summary_md = res["summary_md"]
         payload = res["payload"]
 
         print("[bold green]AEGIS BENCH[/bold green] ✅")
-        print(f"Summary: [cyan]{Path(summary_path).resolve()}[/cyan]\n")
+        print(f"Summary JSON: [cyan]{Path(summary_json).resolve()}[/cyan]")
+        print(f"Summary MD:   [cyan]{Path(summary_md).resolve()}[/cyan]\n")
 
         # Small readable summary
         for r in payload["results"]:
@@ -209,6 +212,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 
