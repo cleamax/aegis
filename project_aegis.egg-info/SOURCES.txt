@@ -3,6 +3,7 @@ pyproject.toml
 aegis/__init__.py
 aegis/bench.py
 aegis/cli.py
+aegis/config.py
 aegis/core/__init__.py
 aegis/core/run.py
 aegis/core/trace.py

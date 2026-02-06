@@ -1,0 +1,10 @@
+{
+  "out": "runs",
+  "scenarios": [
+    "indirect_injection_01",
+    "context_fragmentation_01",
+    "token_smuggling_01"
+  ],
+  "policies": ["strict", "permissive"],
+  "guard": "layered"
+}

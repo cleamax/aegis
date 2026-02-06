@@ -8,6 +8,7 @@ from typing import Optional
 from rich import print
 
 from aegis.bench import bench
+from aegis.config import load_bench_config
 from aegis.core.run import new_run
 from aegis.defenses.approval_monitor import Policy
 from aegis.defenses.engine import DefenseEngine
@@ -96,6 +97,7 @@ def main() -> None:
 
     # --- bench ---
     b = sub.add_parser("bench", help="Run multiple scenarios/policies and write a summary")
+    b.add_argument("--config", help="Path to bench config JSON (overrides other flags)")
     b.add_argument("--out", default="runs", help="Runs root folder")
     b.add_argument("--scenarios", nargs="+", default=["indirect_injection_01", "context_fragmentation_01", "token_smuggling_01"])
     b.add_argument("--policies", nargs="+", default=["strict", "permissive"])
@@ -190,7 +192,20 @@ def main() -> None:
         return
 
     if args.cmd == "bench":
-        res = bench(out_root=args.out, scenarios=args.scenarios, policies=args.policies, guard=args.guard)
+        if args.config:
+            cfg = load_bench_config(args.config)
+            out_root = cfg.out
+            scenarios = cfg.scenarios
+            policies = cfg.policies
+            guard = cfg.guard
+            print(f"[bold]Using config:[/bold] [cyan]{Path(args.config).resolve()}[/cyan]")
+        else:
+            out_root = args.out
+            scenarios = args.scenarios
+            policies = args.policies
+            guard = args.guard
+
+        res = bench(out_root=out_root, scenarios=scenarios, policies=policies, guard=guard)
         print("[bold green]AEGIS BENCH[/bold green] ✅")
         print(f"Summary JSON: [cyan]{Path(res['summary_json']).resolve()}[/cyan]")
         print(f"Summary MD:   [cyan]{Path(res['summary_md']).resolve()}[/cyan]\n")
@@ -210,3 +225,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
