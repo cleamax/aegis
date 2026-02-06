@@ -8,6 +8,7 @@ aegis/core/trace.py
 aegis/defenses/__init__.py
 aegis/defenses/approval_monitor.py
 aegis/eval/judge.py
+aegis/eval/metrics.py
 aegis/scenarios/__init__.py
 aegis/tools/__init__.py
 aegis/tools/search_local_page.py
