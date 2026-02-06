@@ -26,8 +26,8 @@ class BenchResult:
     attempted: Dict[str, int]
     blocked: Dict[str, int]
     executed: Dict[str, int]
-    # judge fields
     judge_score: float
+    judge_reason: str
     attack_success: bool
     attempted_exfil: bool
 
@@ -177,7 +177,6 @@ def _write_readme_snippet(report_dir: Path, payload: Dict[str, Any]) -> Path:
         "",
     ]
 
-    # include the results table only
     in_table = False
     for line in md.splitlines():
         if line.startswith("| Scenario |"):
@@ -235,6 +234,7 @@ def bench(
                     blocked=dict(m["blocked"]),
                     executed=dict(m["executed"]),
                     judge_score=float(m.get("judge_score", 0.0)),
+                    judge_reason=str(m.get("judge_reason", "")),
                     attack_success=bool(m.get("attack_success", False)),
                     attempted_exfil=bool(m.get("attempted_exfil", False)),
                 )
@@ -266,3 +266,4 @@ def bench(
         "snippet_md": str(snippet_path),
         "payload": payload,
     }
+

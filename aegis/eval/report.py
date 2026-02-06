@@ -14,6 +14,12 @@ def _rate(numer: int, denom: int) -> str:
     return f"{(numer / denom) * 100:.1f}%"
 
 
+def _avg(total: float, n: int) -> str:
+    if n <= 0:
+        return "—"
+    return f"{(total / n):.2f}"
+
+
 def bench_summary_to_markdown(payload: Dict[str, Any]) -> str:
     report_dir = str(payload.get("report_dir", ""))
     runs_dir = str(payload.get("runs_dir", ""))
@@ -40,11 +46,10 @@ def bench_summary_to_markdown(payload: Dict[str, Any]) -> str:
     lines.append(f"- Policies: {', '.join(f'`{p}`' for p in policies) if policies else '—'}")
     lines.append("")
 
-    # Results table
     lines.append("## Results")
     lines.append("")
-    lines.append("| Scenario | Policy | Guard | Exfil Attempt | Blocked | Email Executed (mocked) | Judge Score | Run ID |")
-    lines.append("|---|---|---|---:|---:|---:|---:|---|")
+    lines.append("| Scenario | Policy | Guard | Exfil Attempt | Blocked | Email Executed | Judge Score | Judge Reason | Run ID |")
+    lines.append("|---|---|---|---:|---:|---:|---:|---|---|")
 
     results_sorted = sorted(results, key=lambda r: (r.get("scenario", ""), r.get("policy", "")))
 
@@ -54,7 +59,7 @@ def bench_summary_to_markdown(payload: Dict[str, Any]) -> str:
         rg = _md_escape(str(r.get("guard", guard)))
 
         attempted_exfil = "✅" if r.get("attempted_exfil") else "❌"
-        # We count blocked if send_email was blocked at least once
+
         blocked_map = r.get("blocked") or {}
         blocked_any = False
         if isinstance(blocked_map, dict):
@@ -63,39 +68,41 @@ def bench_summary_to_markdown(payload: Dict[str, Any]) -> str:
 
         email_exec = "✅" if r.get("email_executed_mocked") else "❌"
         judge_score = f"{float(r.get('judge_score', 0.0)):.2f}"
+        reason = _md_escape(str(r.get("judge_reason", "")))[:80]
         run_id = _md_escape(str(r.get("run_id", "")))
 
         lines.append(
-            f"| `{scenario}` | `{policy}` | `{rg}` | {attempted_exfil} | {blocked_icon} | {email_exec} | {judge_score} | `{run_id}` |"
+            f"| `{scenario}` | `{policy}` | `{rg}` | {attempted_exfil} | {blocked_icon} | {email_exec} | {judge_score} | {reason} | `{run_id}` |"
         )
 
-    # Aggregations
     lines.append("")
     lines.append("## Aggregate")
     lines.append("")
-    # success rate = count attack_success / total
-    # per policy
-    agg: Dict[Tuple[str, str], Dict[str, int]] = {}
+
+    # per (policy, guard)
+    agg: Dict[Tuple[str, str], Dict[str, Any]] = {}
     for r in results:
         pol = str(r.get("policy", ""))
         g = str(r.get("guard", guard))
         key = (pol, g)
         if key not in agg:
-            agg[key] = {"total": 0, "success": 0, "attempted": 0}
+            agg[key] = {"total": 0, "success": 0, "attempted": 0, "score_sum": 0.0}
         agg[key]["total"] += 1
+        agg[key]["score_sum"] += float(r.get("judge_score", 0.0))
         if r.get("attack_success"):
             agg[key]["success"] += 1
         if r.get("attempted_exfil"):
             agg[key]["attempted"] += 1
 
-    lines.append("| Policy | Guard | Runs | Exfil Attempts | Attack Success | Success Rate |")
-    lines.append("|---|---|---:|---:|---:|---:|")
+    lines.append("| Policy | Guard | Runs | Exfil Attempts | Attack Success | Success Rate | Avg Judge Score |")
+    lines.append("|---|---|---:|---:|---:|---:|---:|")
     for (pol, g), a in sorted(agg.items(), key=lambda x: (x[0][0], x[0][1])):
-        total = a["total"]
-        attempted = a["attempted"]
-        success = a["success"]
+        total = int(a["total"])
+        attempted = int(a["attempted"])
+        success = int(a["success"])
+        score_sum = float(a["score_sum"])
         lines.append(
-            f"| `{_md_escape(pol)}` | `{_md_escape(g)}` | {total} | {attempted} | {success} | {_rate(success, total)} |"
+            f"| `{_md_escape(pol)}` | `{_md_escape(g)}` | {total} | {attempted} | {success} | {_rate(success, total)} | {_avg(score_sum, total)} |"
         )
 
     lines.append("")
@@ -103,8 +110,10 @@ def bench_summary_to_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("- `permissive` is intentionally unsafe (baseline).")
     lines.append("- `strict` blocks high-risk actions by policy.")
-    lines.append("- `layered` should reduce success even under `permissive` by adding guardrails.")
+    lines.append("- `layered` should reduce success even under `permissive` via guardrails.")
+    lines.append("- Judge v2 uses graded scoring (0.0 / 0.5 / 1.0) for quick comparison.")
     lines.append("")
 
     return "\n".join(lines)
+
 

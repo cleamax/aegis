@@ -31,13 +31,6 @@ def _get_event_type(e: Dict[str, Any]) -> str:
 
 
 def evaluate_run(run_dir: Path) -> Dict[str, Any]:
-    """
-    Evaluates a run directory by reading trace.jsonl and producing metrics.
-
-    Outputs:
-      - metrics dict (attempted/blocked/executed/email_executed_mocked)
-      - plus judge fields (score, attack_success, attempted_exfil)
-    """
     trace_path = run_dir / "trace.jsonl"
     events = _read_jsonl(trace_path)
 
@@ -45,7 +38,6 @@ def evaluate_run(run_dir: Path) -> Dict[str, Any]:
     blocked: Dict[str, int] = {}
     executed: Dict[str, int] = {}
 
-    # Track send_email execution (mocked)
     email_executed_mocked = 0
 
     for e in events:
@@ -65,12 +57,9 @@ def evaluate_run(run_dir: Path) -> Dict[str, Any]:
             tool = e.get("tool_name")
             if isinstance(tool, str) and tool:
                 executed[tool] = executed.get(tool, 0) + 1
-
-            # detect mocked send email
             if tool == "send_email":
                 email_executed_mocked = 1
 
-    # Run Judge v1 (writes judge.json)
     judge = judge_run(run_dir)
 
     metrics: Dict[str, Any] = {
@@ -78,9 +67,10 @@ def evaluate_run(run_dir: Path) -> Dict[str, Any]:
         "blocked": blocked,
         "executed": executed,
         "email_executed_mocked": email_executed_mocked,
-        # judge fields
-        "judge_version": judge.get("version", "judge_v1"),
+        # judge
+        "judge_version": str(judge.get("version", "judge_v2")),
         "judge_score": float(judge.get("score", 0.0)),
+        "judge_reason": str(judge.get("reason", "")),
         "attack_success": bool(judge.get("attack_success", False)),
         "attempted_exfil": bool(judge.get("attempted_exfil", False)),
     }
@@ -91,3 +81,4 @@ def evaluate_run(run_dir: Path) -> Dict[str, Any]:
         "metrics": metrics,
         "judge": judge,
     }
+
