@@ -9,7 +9,8 @@ from rich import print
 
 from aegis.bench import bench
 from aegis.core.run import new_run
-from aegis.defenses.approval_monitor import ApprovalMonitor, Policy
+from aegis.defenses.approval_monitor import Policy
+from aegis.defenses.engine import DefenseEngine
 from aegis.eval.metrics import evaluate_run
 from aegis.tools.decoder import decode_base64
 from aegis.tools.search_local_page import SearchLocalPageTool
@@ -50,11 +51,11 @@ def _extract_base64_marker(html: str) -> str | None:
     return payload or None
 
 
-def _attempt_send_email(ctx, monitor: ApprovalMonitor, to: str, subject: str, body: str) -> None:
+def _attempt_send_email(ctx, engine: DefenseEngine, to: str, subject: str, body: str, context_text: str) -> None:
     email_tool = SendEmailTool()
     proposed = email_tool.propose(to=to, subject=subject, body=body)
 
-    decision = monitor.decide(proposed_call=proposed)
+    decision = engine.decide(proposed_call=proposed, context_text=context_text)
     ctx.trace.event(
         "tool_decision",
         tool_name=proposed.name,
@@ -78,18 +79,12 @@ def main() -> None:
     run = sub.add_parser("run", help="Run a scenario in the harness")
     run.add_argument("--scenario", required=True, help="Scenario file name (without extension)")
     run.add_argument("--out", default="runs", help="Output folder for run artifacts")
+    run.add_argument("--policy", choices=["strict", "permissive"], default="strict", help="Security policy")
+    run.add_argument("--guard", choices=["none", "keywords"], default="none", help="Guardrails layer")
 
-    run.add_argument("--demo-email", action="store_true", help="Demo: attempt a send_email tool call")
-    run.add_argument("--demo-indirect", action="store_true", help="Demo: indirect injection flow (local HTML)")
-    run.add_argument("--demo-fragment", action="store_true", help="Demo: context fragmentation (multi-turn)")
-    run.add_argument("--demo-smuggling", action="store_true", help="Demo: token smuggling via base64 in HTML)")
-
-    run.add_argument(
-        "--policy",
-        choices=["strict", "permissive"],
-        default="strict",
-        help="Security policy to apply",
-    )
+    run.add_argument("--demo-indirect", action="store_true", help="Demo: indirect injection")
+    run.add_argument("--demo-fragment", action="store_true", help="Demo: context fragmentation")
+    run.add_argument("--demo-smuggling", action="store_true", help="Demo: token smuggling")
 
     # --- eval ---
     ev = sub.add_parser("eval", help="Evaluate a run directory (trace.jsonl)")
@@ -100,13 +95,9 @@ def main() -> None:
     # --- bench ---
     b = sub.add_parser("bench", help="Run multiple scenarios/policies and write a summary")
     b.add_argument("--out", default="runs", help="Runs root folder")
-    b.add_argument(
-        "--scenarios",
-        nargs="+",
-        default=["indirect_injection_01", "context_fragmentation_01", "token_smuggling_01"],
-        help="Scenario names (no extension)",
-    )
-    b.add_argument("--policies", nargs="+", default=["strict", "permissive"], help="Policies to run")
+    b.add_argument("--scenarios", nargs="+", default=["indirect_injection_01", "context_fragmentation_01", "token_smuggling_01"])
+    b.add_argument("--policies", nargs="+", default=["strict", "permissive"])
+    b.add_argument("--guard", choices=["none", "keywords"], default="none", help="Guardrails layer")
 
     args = parser.parse_args()
 
@@ -124,26 +115,25 @@ def main() -> None:
         ctx.trace.event("scenario_loaded", name=args.scenario, path=str(scenario_path))
         ctx.trace.event("scenario_text", text=scenario_text)
 
+        policy = Policy.permissive() if args.policy == "permissive" else Policy.default()
+        engine = DefenseEngine(policy=policy, guard=args.guard)
+
         print("[bold green]AEGIS[/bold green] ✅")
         print(f"Run ID:   [cyan]{ctx.run_id}[/cyan]")
         print(f"Run dir:  [cyan]{ctx.run_dir.resolve()}[/cyan]")
         print(f"Scenario: [cyan]{args.scenario}[/cyan]")
-        print(f"Policy:   [cyan]{args.policy}[/cyan]\n")
+        print(f"Policy:   [cyan]{args.policy}[/cyan]")
+        print(f"Guard:    [cyan]{args.guard}[/cyan]\n")
         print(scenario_text)
 
         ctx.trace.event("agent_start", mode="demo_no_llm")
 
-        policy = Policy.permissive() if args.policy == "permissive" else Policy.default()
-        monitor = ApprovalMonitor(policy=policy)
-
-        if args.demo_email:
-            _attempt_send_email(ctx, monitor, "test@example.com", "AEGIS demo", "hello (mocked)")
-
         if args.demo_indirect:
             search_tool = SearchLocalPageTool()
             res = search_tool.execute(ctx=ctx, page="evil_page.html")
+            html = res["html"]
             ctx.trace.event("untrusted_content_received", source="search_local_page", note="HTML may contain hidden instructions")
-            _attempt_send_email(ctx, monitor, "attacker@example.com", "exfil", "(simulated) influenced by indirect injection")
+            _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) influenced by indirect injection", html)
 
         if args.demo_fragment:
             fragments = [
@@ -153,8 +143,9 @@ def main() -> None:
             ]
             for i, msg in enumerate(fragments, start=1):
                 ctx.trace.event("user_message", turn=i, text=msg)
-            ctx.trace.event("assembled_instruction", method="concatenate", preview=(" ".join(fragments))[:200])
-            _attempt_send_email(ctx, monitor, "attacker@example.com", "exfil", "(simulated) assembled from fragments")
+            assembled = " ".join(fragments)
+            ctx.trace.event("assembled_instruction", method="concatenate", preview=assembled[:200])
+            _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", "(simulated) assembled from fragments", assembled)
 
         if args.demo_smuggling:
             search_tool = SearchLocalPageTool()
@@ -166,7 +157,7 @@ def main() -> None:
             decoded = decode_base64(payload) if payload else ""
             if payload:
                 ctx.trace.event("decode_success", encoding="base64", decoded_preview=decoded[:200])
-            _attempt_send_email(ctx, monitor, "attacker@example.com", "exfil", f"(simulated) decoded: {decoded[:200]}")
+            _attempt_send_email(ctx, engine, "attacker@example.com", "exfil", f"(simulated) decoded: {decoded[:200]}", decoded or html)
 
         ctx.trace.event("agent_end")
         ctx.trace.event("run_end", run_id=ctx.run_id)
@@ -177,7 +168,6 @@ def main() -> None:
     # =========================
     if args.cmd == "eval":
         out_root = args.out
-
         if args.latest:
             run_dir = _latest_run_dir(out_root)
             if run_dir is None:
@@ -188,7 +178,6 @@ def main() -> None:
             run_dir = Path(out_root) / args.run
 
         result = evaluate_run(run_dir)
-
         metrics_path = Path(run_dir) / "metrics.json"
         metrics_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
 
@@ -208,20 +197,16 @@ def main() -> None:
     # BENCH
     # =========================
     if args.cmd == "bench":
-        res = bench(out_root=args.out, scenarios=args.scenarios, policies=args.policies)
-
-        summary_json = res["summary_json"]
-        summary_md = res["summary_md"]
-        payload = res["payload"]
-
+        res = bench(out_root=args.out, scenarios=args.scenarios, policies=args.policies, guard=args.guard)
         print("[bold green]AEGIS BENCH[/bold green] ✅")
-        print(f"Summary JSON: [cyan]{Path(summary_json).resolve()}[/cyan]")
-        print(f"Summary MD:   [cyan]{Path(summary_md).resolve()}[/cyan]\n")
+        print(f"Summary JSON: [cyan]{Path(res['summary_json']).resolve()}[/cyan]")
+        print(f"Summary MD:   [cyan]{Path(res['summary_md']).resolve()}[/cyan]\n")
 
-        for r in payload["results"]:
+        for r in res["payload"]["results"]:
             print(
                 f"- scenario=[cyan]{r['scenario']}[/cyan] "
                 f"policy=[cyan]{r['policy']}[/cyan] "
+                f"guard=[cyan]{r['guard']}[/cyan] "
                 f"email_executed=[bold]{r['email_executed_mocked']}[/bold] "
                 f"blocked={r['blocked']}"
             )
@@ -232,7 +217,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
-
