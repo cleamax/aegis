@@ -19,8 +19,13 @@ class Policy:
 
     @staticmethod
     def default() -> "Policy":
-        # Start strict: block high-risk tools by default
+        # Strict by default: block high-risk tools
         return Policy(tool_allowlist={"send_email": False})
+
+    @staticmethod
+    def permissive() -> "Policy":
+        # Intentionally unsafe demo policy: allow everything we defined
+        return Policy(tool_allowlist={"send_email": True})
 
 
 class ApprovalMonitor:
@@ -32,3 +37,4 @@ class ApprovalMonitor:
         if allowed:
             return Decision(True, "Allowed by policy")
         return Decision(False, "Blocked by policy (high-risk tool or not allowlisted)")
+
