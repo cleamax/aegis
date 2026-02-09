@@ -174,10 +174,16 @@ streamlit run dashboard/app.py
 Access at: **http://localhost:8501**
 
 
-### Reproducible experiments
+## Contact
 
-Example:
+📧 **max.richter.dev@proton.me**
 
-```bash
-aegis bench --config configs/experiments/basic.json
+<a href="https://www.linkedin.com/in/maximilian-richter-40697a298/">
+  <img src="https://img.shields.io/badge/-LinkedIn-0072b1?&style=for-the-badge&logo=linkedin&logoColor=white" />
+</a>
+
+<a href="https://github.com/cleamax">
+  <img src="https://img.shields.io/badge/-GitHub-181717?&style=for-the-badge&logo=github&logoColor=white" />
+</a>
+
 
