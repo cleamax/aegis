@@ -136,6 +136,15 @@ The agent logic is intentionally minimal. The key property is that security-rele
 
 ### Running Tests & Fuzzing
 
+## Quick Start (60 seconds)
+
+```bash
+# Install AEGIS in editable mode
+pip install -e .
+```
+# Run a reproducible security benchmark
+aegis bench --config configs/experiments/basic.json
+
 Ensure you have the dev dependencies installed:
 
 ```bash
@@ -159,7 +168,10 @@ Visualize run telemetry in the new **AEGIS Security Command Center**:
 - **Real-time Event Stream**: Live monitoring of agent tool use.
 - **Policy Analytics**: Charts showing Allowed vs Blocked actions.
 - **Trace Analysis**: Deep dive into individual tool calls and defense logic.
-- **Professional UI**: Dark-mode security aesthetic.
+
+The dashboard is intended for exploratory analysis of traces and policy behavior,
+not for operational monitoring.
+
 
 Launch locally:
 
