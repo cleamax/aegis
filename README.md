@@ -133,9 +133,7 @@ The agent logic is intentionally minimal. The key property is that security-rele
 
 ## Reproducible experiments
 
-
-```md
-## Quick Start (60 seconds)
+### Quick Start (60 seconds)
 
 ```bash
 # Install AEGIS in editable mode
@@ -143,12 +141,7 @@ pip install -e .
 
 # Run a reproducible security benchmark
 aegis bench --config configs/experiments/basic.json
-
-Ensure you have the dev dependencies installed:
-
-```bash
-pip install -e .[dev]
-```
+````
 
 Run the full suite (Unit, Integration, Fuzzing):
 
