@@ -1,3 +1,4 @@
+import pytest
 from hypothesis import given, settings, HealthCheck, strategies as st
 from aegis.defenses.keyword_guard import KeywordGuard, KeywordGuardConfig
 from aegis.defenses.semantic_guard import SemanticGuard, SemanticGuardConfig

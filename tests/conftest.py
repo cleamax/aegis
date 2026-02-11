@@ -12,8 +12,8 @@ def mock_run_context(tmp_path):
 
 @pytest.fixture
 def strict_policy():
-    return Policy.STRICT
+    return Policy.default()
 
 @pytest.fixture
 def permissive_policy():
-    return Policy.PERMISSIVE
+    return Policy.permissive()
