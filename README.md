@@ -15,8 +15,8 @@
 ```mermaid
 flowchart TD
     %% Minimalist Security Style
-    classDef default fill:#ffffff,stroke:#000000,stroke-width:1px,color:#000000,font-size:10px;
-    classDef node fill:#ffffff,stroke:#000000,stroke-width:1px,color:#000000,font-size:10px;
+    classDef default fill:#ffffff,stroke:#000000,stroke-width:1px,color:#000000,font-size:12px;
+    classDef node fill:#ffffff,stroke:#000000,stroke-width:1px,color:#000000,font-size:12px;
     
     Scenario[Scenario] -->|Adversarial Input| Agent[Agent]
     Agent -->|Tool Proposal| Engine{Defense Engine}
