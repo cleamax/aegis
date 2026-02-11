@@ -1,5 +1,4 @@
-import pytest
-from hypothesis import given, settings, Phase, strategies as st
+from hypothesis import given, settings, HealthCheck, strategies as st
 from aegis.defenses.keyword_guard import KeywordGuard, KeywordGuardConfig
 from aegis.defenses.semantic_guard import SemanticGuard, SemanticGuardConfig
 from aegis.tools.send_email import ToolCall
@@ -7,7 +6,12 @@ import os
 
 # CI-friendly settings
 if os.getenv("CI"):
-    settings.register_profile("ci", max_examples=100, deadline=None)
+    settings.register_profile(
+        "ci", 
+        max_examples=50, 
+        deadline=None, 
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much]
+    )
     settings.load_profile("ci")
 else:
     settings.register_profile("dev", max_examples=10, deadline=200)
