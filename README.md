@@ -15,20 +15,22 @@
 
 ```mermaid
 flowchart LR
-    A[Scenario] -->|Adversarial Input| B[Agent]
-    B -->|Tool Proposal| C{Defense Engine}
+    Scenario[Scenario] -->|Adversarial Input| Agent[Agent]
+    Agent -->|Tool Proposal| Engine{Defense Engine}
     
-    subgraph Defense Engine
-    D[Policy Layer] --> E[Keyword Guard]
-    E --> F[Semantic Guard]
-    end
+    Engine -->|Check| Policy[Policy Layer]
+    Policy -->|Pass| Keyword[Keyword Guard]
+    Keyword -->|Pass| Semantic[Semantic Guard]
     
-    C -->|Blocked| G[Block Event]
-    C -->|Allowed| H[Tool Execution (Mocked)]
+    Semantic -->|Allowed| Tool[Tool Execution]
     
-    G --> I[Trace Log]
-    H --> I
-    I --> J[Metrics & Reports]
+    Policy -.->|Block| Block[Block Event]
+    Keyword -.->|Block| Block
+    Semantic -.->|Block| Block
+    
+    Tool --> Trace[Trace Log]
+    Block --> Trace
+    Trace --> Metrics[Metrics & Reports]
 ```
 
 ---
