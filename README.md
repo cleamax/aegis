@@ -63,7 +63,18 @@ flowchart TD
 
 ---
 
-## Benchmark Results (Example)
+## Benchmark Results (example run)
+
+The numbers below were generated using committed benchmark reports.
+All artifacts are available under `reports/bench/`.
+
+To reproduce:
+
+```bash
+aegis bench --config configs/experiments/bench_none.json
+aegis bench --config configs/experiments/bench_keywords.json
+aegis bench --config configs/experiments/bench_layered.json
+````
 
 | Policy | Guards | Attack Success Rate |
 | :--- | :--- | :--- |
