@@ -6,7 +6,17 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**AEGIS is a deterministic security evaluation harness for analyzing how tool-using AI agents fail under adversarial input — and which defenses measurably reduce risk.**
+AEGIS is a **deterministic security evaluation harness** for tool-using agent workflows.
+
+It focuses on:
+- policy enforcement
+- layered guardrails (keyword + semantic similarity)
+- trace-based evaluation
+- reproducible security experiments using mocked tools
+
+> Note: The current version uses a deterministic demo runner without a live LLM integration.  
+> The architecture is provider-agnostic and designed for future LLM integration.
+
 
 ---
 
@@ -76,18 +86,28 @@ AEGIS models attacks against **tool-using agents**:
 
 ---
 
-## Defense Model
+## How it works
 
-### Policy Layer
-- **strict**: Blocks high-risk tools (file system, shell) by default.
-- **permissive**: Intentionally unsafe baseline for control experiments.
+AEGIS runs scenarios through a layered defense pipeline:
 
-### Guardrails
-- **Keyword Guard**: Fast, deterministic blocking of known bad patterns.
-- **Semantic Guard**: N-gram cosine similarity (dependency-free) for obfuscation detection.
-- **Layered Defense**: Combining strict policy + multiple guards for defense-in-depth.
+1. **Policy / Approval Monitor**  
+   Enforces tool allowlists (e.g., email allowed or blocked)
 
-*All decisions are deterministic, explainable, and trace-logged.*
+2. **Keyword Guard**  
+   Blocks obvious high-risk patterns
+
+3. **Semantic Guard (n-gram cosine similarity)**  
+   Detects obfuscated or fragmented attack attempts
+
+4. **Mocked Tool Execution**  
+   Safe tool stubs with no real-world side effects
+
+5. **Trace Logging**  
+   Every decision is written to `trace.jsonl`
+
+6. **Evaluation & Reporting**  
+   Deterministic scoring and benchmark summaries
+
 
 ---
 
